@@ -36,7 +36,7 @@ class Dwell:
             v2 = self.vertices[(i + 1) % len(self.vertices)]
             mid_x = (v1[0] + v2[0]) / 2
             mid_y = (v1[1] + v2[1]) / 2
-            length = math.sqrt((v2[0] - v1[0]) ** 2 + (v2[1] - v1[1]) ** 2)
+            length = math.hypot(v2[0] - v1[0], v2[1] - v1[1])
             angle = math.atan2(v2[1] - v1[1], v2[0] - v1[0])
             bpy.ops.mesh.primitive_cube_add(
                 size=2, location=(mid_x, mid_y, height / 2), rotation=(0, 0, angle)
@@ -72,7 +72,7 @@ class Dwell:
     def add_opening(self, edge_index, opening_width, opening_height, sill=0, offset=0):
         v1 = self.vertices[edge_index]
         v2 = self.vertices[(edge_index + 1) % len(self.vertices)]
-        length = math.sqrt((v2[0] - v1[0]) ** 2 + (v2[1] - v1[1]) ** 2)
+        length = math.hypot(v2[0] - v1[0], v2[1] - v1[1])
         angle = math.atan2(v2[1] - v1[1], v2[0] - v1[0])
         mid_x = (v1[0] + v2[0]) / 2
         mid_y = (v1[1] + v2[1]) / 2
