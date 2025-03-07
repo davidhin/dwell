@@ -1,6 +1,11 @@
 import bpy  # type: ignore
 import os
 import math
+from collections import namedtuple
+
+Wall = namedtuple(
+    "Wall", ["mid_x", "mid_y", "unit_x", "unit_y", "length", "angle", "object"]
+)
 
 
 class Dwell:
@@ -27,43 +32,47 @@ class Dwell:
         self.width = max(xs) - min(xs)
         self.depth = max(ys) - min(ys)
 
+    def get_wall(self, edge_index):
+        v1 = self.vertices[edge_index]
+        v2 = self.vertices[(edge_index + 1) % len(self.vertices)]
+        mid_x = (v1[0] + v2[0]) / 2
+        mid_y = (v1[1] + v2[1]) / 2
+        length = math.hypot(v2[0] - v1[0], v2[1] - v1[1])
+        unit_x = (v2[0] - v1[0]) / length
+        unit_y = (v2[1] - v1[1]) / length
+        angle = math.atan2(v2[1] - v1[1], v2[0] - v1[0])
+        wall_obj = (
+            self.wall_objects[edge_index]
+            if edge_index < len(self.wall_objects)
+            else None
+        )
+        return Wall(mid_x, mid_y, unit_x, unit_y, length, angle, wall_obj)
+
     def create_walls(self, height, thickness):
         self.height = height
         self.thickness = thickness
         self.wall_objects = []
         for i in range(len(self.vertices)):
-            v1 = self.vertices[i]
-            v2 = self.vertices[(i + 1) % len(self.vertices)]
-            mid_x = (v1[0] + v2[0]) / 2
-            mid_y = (v1[1] + v2[1]) / 2
-            length = math.hypot(v2[0] - v1[0], v2[1] - v1[1])
-            angle = math.atan2(v2[1] - v1[1], v2[0] - v1[0])
+            wall = self.get_wall(i)
             bpy.ops.mesh.primitive_cube_add(
-                size=2, location=(mid_x, mid_y, height / 2), rotation=(0, 0, angle)
+                size=2,
+                location=(wall.mid_x, wall.mid_y, height / 2),
+                rotation=(0, 0, wall.angle),
             )
-            wall = bpy.context.active_object
-            wall.scale.x = length / 2
-            wall.scale.y = thickness / 2
-            wall.scale.z = height / 2
-            self.wall_objects.append(wall)
+            wall_obj = bpy.context.active_object
+            wall_obj.scale.x = wall.length / 2
+            wall_obj.scale.y = thickness / 2
+            wall_obj.scale.z = height / 2
+            self.wall_objects.append(wall_obj)
 
     def add_window(self, edge_index, window_width, window_height, sill, offset=0):
-        v1 = self.vertices[edge_index]
-        v2 = self.vertices[(edge_index + 1) % len(self.vertices)]
-        mid_x = (v1[0] + v2[0]) / 2
-        mid_y = (v1[1] + v2[1]) / 2
-        dx = v2[0] - v1[0]
-        dy = v2[1] - v1[1]
-        length = math.sqrt(dx * dx + dy * dy)
-        angle = math.atan2(dy, dx)
-        unit_x = dx / length
-        unit_y = dy / length
-        cx = mid_x + unit_x * offset
-        cy = mid_y + unit_y * offset
+        wall = self.get_wall(edge_index)
+        cx = wall.mid_x + wall.unit_x * offset
+        cy = wall.mid_y + wall.unit_y * offset
         bpy.ops.mesh.primitive_plane_add(
             size=2,
             location=(cx, cy, sill + window_height / 2),
-            rotation=(math.radians(90), 0, angle),
+            rotation=(math.radians(90), 0, wall.angle),
         )
         window = bpy.context.active_object
         window.scale.x = window_width / 2
