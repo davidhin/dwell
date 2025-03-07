@@ -111,6 +111,7 @@ class Dwell:
         floor=False,
         snap_line=False,
         wall_edge_index=None,
+        snap_rotate=[0, 2],
     ):
         bpy.ops.import_scene.gltf(filepath=filepath)
         imported_objects = bpy.context.selected_objects
@@ -134,16 +135,16 @@ class Dwell:
 
             if snap_line and wall_edge_index is not None:
                 wall = self.get_wall(wall_edge_index)
-                self.snap_line_to_wall(obj, wall)
+                self.snap_line_to_wall(obj, wall, snap_rotate)
 
-    def snap_line_to_wall(self, obj, wall):
+    def snap_line_to_wall(self, obj, wall, snap_rotate):
         # Update scene and get evaluated object
         bpy.context.view_layer.update()
 
         # Rotate the object against the wall based on oriented bounding box
         obj.rotation_mode = "XYZ"
         bbox = self.bounding_box_obb(obj)
-        obj_unit_vector = (bbox[0] - bbox[2]).normalized()
+        obj_unit_vector = (bbox[snap_rotate[0]] - bbox[snap_rotate[1]]).normalized()
         angle = math.atan2(
             obj_unit_vector.cross(wall.normal).z, obj_unit_vector.dot(wall.normal)
         )
@@ -153,7 +154,7 @@ class Dwell:
         obj.location.x = wall.mid_x
         obj.location.y = wall.mid_y
         bbox = self.bounding_box_obb(obj)
-        offset = (bbox[0] - bbox[2]).length / 2
+        offset = (bbox[snap_rotate[0]] - bbox[snap_rotate[1]]).length / 2
 
         # Move back of object against wall
         obj.location.x += wall.normal.x * offset
