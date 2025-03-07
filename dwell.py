@@ -79,29 +79,21 @@ class Dwell:
         window.scale.y = window_height / 2
 
     def add_opening(self, edge_index, opening_width, opening_height, sill=0, offset=0):
-        v1 = self.vertices[edge_index]
-        v2 = self.vertices[(edge_index + 1) % len(self.vertices)]
-        length = math.hypot(v2[0] - v1[0], v2[1] - v1[1])
-        angle = math.atan2(v2[1] - v1[1], v2[0] - v1[0])
-        mid_x = (v1[0] + v2[0]) / 2
-        mid_y = (v1[1] + v2[1]) / 2
-        ux = (v2[0] - v1[0]) / length
-        uy = (v2[1] - v1[1]) / length
-        cx = mid_x + offset * ux
-        cy = mid_y + offset * uy
+        wall = self.get_wall(edge_index)
+        cx = wall.mid_x + wall.unit_x * offset
+        cy = wall.mid_y + wall.unit_y * offset
         opening_center = (cx, cy, sill + opening_height / 2)
         bpy.ops.mesh.primitive_cube_add(
-            size=2, location=opening_center, rotation=(0, 0, angle)
+            size=2, location=opening_center, rotation=(0, 0, wall.angle)
         )
         opening_obj = bpy.context.active_object
         opening_obj.scale.x = opening_width / 2
         opening_obj.scale.y = self.thickness / 2 * 1.1
         opening_obj.scale.z = opening_height / 2
-        wall = self.wall_objects[edge_index]
-        mod = wall.modifiers.new(name="OpeningCutout", type="BOOLEAN")
+        mod = wall.object.modifiers.new(name="OpeningCutout", type="BOOLEAN")
         mod.operation = "DIFFERENCE"
         mod.object = opening_obj
-        bpy.context.view_layer.objects.active = wall
+        bpy.context.view_layer.objects.active = wall.object
         bpy.ops.object.modifier_apply(modifier=mod.name)
         bpy.data.objects.remove(opening_obj, do_unlink=True)
 

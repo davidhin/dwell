@@ -11,6 +11,6 @@ design.create_walls(3, 0.2)
 design.add_window(edge_index=4, window_width=2, window_height=1.5, sill=1, offset=0)
 design.add_window(edge_index=0, window_width=2, window_height=1.5, sill=1, offset=0)
 design.add_window(edge_index=0, window_width=2, window_height=1.5, sill=1, offset=3)
-design.add_opening(edge_index=1, opening_width=2, opening_height=2, sill=0, offset=0)
+design.add_opening(edge_index=1, opening_width=2, opening_height=2, sill=0, offset=1)
 
 design.build("output.blend")
