@@ -30,4 +30,14 @@ design.add_glb_model(
     wall_edge_index=4,
 )
 
+design.add_glb_model(
+    filepath="./kmart_isla2.glb",
+    scale=(1.1, 1.1, 1.1),
+    floor=True,
+    snap_line=True,
+    wall_edge_index=0,
+    snap_rotate=[6, 0],
+    wall_offset=-2,
+)
+
 design.build("output.blend")
