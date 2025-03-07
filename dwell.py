@@ -1,4 +1,5 @@
 import bpy  # type: ignore
+from mathutils import Vector  # type: ignore
 import os
 import math
 from collections import namedtuple
@@ -96,6 +97,29 @@ class Dwell:
         bpy.context.view_layer.objects.active = wall.object
         bpy.ops.object.modifier_apply(modifier=mod.name)
         bpy.data.objects.remove(opening_obj, do_unlink=True)
+
+    def add_glb_model(
+        self, filepath, location, rotation=(0, 0, 0), scale=(1, 1, 1), floor=False
+    ):
+        bpy.ops.import_scene.gltf(filepath=filepath)
+        imported_objects = bpy.context.selected_objects
+        obj = imported_objects[0]
+        if obj:
+            obj.location = location
+            obj.rotation_mode = "XYZ"
+            obj.rotation_euler = rotation
+            obj.scale = scale
+
+            if floor:
+                bpy.context.view_layer.update()
+                depsgraph = bpy.context.evaluated_depsgraph_get()
+                eval_obj = obj.evaluated_get(depsgraph)
+                bbox = [
+                    eval_obj.matrix_world @ Vector(corner)
+                    for corner in eval_obj.bound_box
+                ]
+                min_z = min(v.z for v in bbox)
+                obj.location.z -= min_z + 0.001  # adding a tiny epsilon to avoid gaps
 
     def build(self, filepath):
         if os.path.exists(filepath):
