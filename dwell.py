@@ -112,6 +112,7 @@ class Dwell:
         snap_line=False,
         wall_edge_index=None,
         snap_rotate=[0, 2],
+        wall_offset=0,
     ):
         bpy.ops.import_scene.gltf(filepath=filepath)
         imported_objects = bpy.context.selected_objects
@@ -135,9 +136,9 @@ class Dwell:
 
             if snap_line and wall_edge_index is not None:
                 wall = self.get_wall(wall_edge_index)
-                self.snap_line_to_wall(obj, wall, snap_rotate)
+                self.snap_line_to_wall(obj, wall, snap_rotate, wall_offset)
 
-    def snap_line_to_wall(self, obj, wall, snap_rotate):
+    def snap_line_to_wall(self, obj, wall, snap_rotate, wall_offset):
         # Update scene and get evaluated object
         bpy.context.view_layer.update()
 
@@ -151,8 +152,8 @@ class Dwell:
         obj.rotation_euler = (0, 0, angle)
 
         # Set initial position
-        obj.location.x = wall.mid_x
-        obj.location.y = wall.mid_y
+        obj.location.x = wall.mid_x + wall.unit_x * wall_offset
+        obj.location.y = wall.mid_y + wall.unit_y * wall_offset
         bbox = self.bounding_box_obb(obj)
         offset = (bbox[snap_rotate[0]] - bbox[snap_rotate[1]]).length / 2
 
