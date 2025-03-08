@@ -276,7 +276,7 @@ class DwellObj:
         self.debug_line(bbox[6], bbox[0])
         return self
 
-    def snap_line_to_wall(self, obj, wall, snap_rotate, wall_offset):
+    def snap_line_to_wall(self, obj, wall, snap_rotate, wall_offset, dist_to_wall):
         # Update scene and get evaluated object
         bpy.context.view_layer.update()
 
@@ -293,7 +293,7 @@ class DwellObj:
         obj.location.x = wall.mid_x + wall.unit_x * wall_offset
         obj.location.y = wall.mid_y + wall.unit_y * wall_offset
         bbox = self.bounding_box_obb(obj)
-        offset = (bbox[snap_rotate[0]] - bbox[snap_rotate[1]]).length / 2
+        offset = (bbox[snap_rotate[0]] - bbox[snap_rotate[1]]).length / 2.0
 
         # Move back of object against wall
         obj.location.x += wall.normal.x * offset
@@ -302,8 +302,18 @@ class DwellObj:
         # Offset against wall thickness
         obj.location.x += wall.normal.x * (self.room.thickness / 2)
         obj.location.y += wall.normal.y * (self.room.thickness / 2)
+        obj.location.x += wall.normal.x * dist_to_wall
+        obj.location.y += wall.normal.y * dist_to_wall
 
-    def snap_wall(self, wall_edge_index=0, snap_rotate=[0, 2], wall_offset=0):
+    def snap_wall(self, wall_edge_index=0, snap_face=0, wall_offset=0, dist_to_wall=0):
+        snap_face_map = [(0, 2), (2, 4), (4, 6), (6, 0)]
         wall = self.room.get_wall(wall_edge_index)
-        self.snap_line_to_wall(self.obj, wall, snap_rotate, wall_offset)
+        self.snap_line_to_wall(
+            self.obj, wall, snap_face_map[snap_face], wall_offset, dist_to_wall
+        )
+        return self
+
+    def rotate(self, x=0, y=0, z=0):
+        self.obj.rotation_mode = "XYZ"
+        self.obj.rotation_euler = (math.radians(x), math.radians(y), math.radians(z))
         return self
