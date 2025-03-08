@@ -17,27 +17,20 @@ design.add_opening(edge_index=1, opening_width=2, opening_height=2, sill=0, offs
 design.add_glb_model(
     filepath="./brimnes.glb",
     scale=(3, 3, 3),
-    floor=True,
-    snap_line=True,
-    wall_edge_index=0,
-)
+).floor().snap_wall(wall_edge_index=0)
 
 design.add_glb_model(
     filepath="./kmart_blake1.glb",
     scale=(0.5, 0.5, 0.5),
-    floor=True,
-    snap_line=True,
-    wall_edge_index=4,
-)
+).floor().snap_wall(wall_edge_index=4)
 
 design.add_glb_model(
     filepath="./kmart_isla2.glb",
     scale=(1.1, 1.1, 1.1),
-    floor=True,
-    snap_line=True,
+).floor().snap_wall(
     wall_edge_index=0,
     snap_rotate=[6, 0],
     wall_offset=-2,
-)
+).debug_base_vectors()
 
 design.build("output.blend")

@@ -70,19 +70,6 @@ class Dwell:
             wall_obj.scale.z = height / 2
             self.wall_objects.append(wall_obj)
 
-    def add_window(self, edge_index, window_width, window_height, sill, offset=0):
-        wall = self.get_wall(edge_index)
-        cx = wall.mid_x + wall.unit_x * offset
-        cy = wall.mid_y + wall.unit_y * offset
-        bpy.ops.mesh.primitive_plane_add(
-            size=2,
-            location=(cx, cy, sill + window_height / 2),
-            rotation=(math.radians(90), 0, wall.angle),
-        )
-        window = bpy.context.active_object
-        window.scale.x = window_width / 2
-        window.scale.y = window_height / 2
-
     def add_opening(self, edge_index, opening_width, opening_height, sill=0, offset=0):
         wall = self.get_wall(edge_index)
         cx = wall.mid_x + wall.unit_x * offset
@@ -102,17 +89,21 @@ class Dwell:
         bpy.ops.object.modifier_apply(modifier=mod.name)
         bpy.data.objects.remove(opening_obj, do_unlink=True)
 
+    def add_window(self, edge_index, window_width, window_height, sill, offset=0):
+        wall = self.get_wall(edge_index)
+        cx = wall.mid_x + wall.unit_x * offset
+        cy = wall.mid_y + wall.unit_y * offset
+        bpy.ops.mesh.primitive_plane_add(
+            size=2,
+            location=(cx, cy, sill + window_height / 2),
+            rotation=(math.radians(90), 0, wall.angle),
+        )
+        window = bpy.context.active_object
+        window.scale.x = window_width / 2
+        window.scale.y = window_height / 2
+
     def add_glb_model(
-        self,
-        filepath,
-        location=(0, 0, 0),
-        rotation=(0, 0, 0),
-        scale=(1, 1, 1),
-        floor=False,
-        snap_line=False,
-        wall_edge_index=None,
-        snap_rotate=[0, 2],
-        wall_offset=0,
+        self, filepath, location=(0, 0, 0), rotation=(0, 0, 0), scale=(1, 1, 1)
     ):
         bpy.ops.import_scene.gltf(filepath=filepath)
         imported_objects = bpy.context.selected_objects
@@ -123,50 +114,25 @@ class Dwell:
             obj.rotation_euler = rotation
             obj.scale = scale
 
-            if floor:
-                bpy.context.view_layer.update()
-                depsgraph = bpy.context.evaluated_depsgraph_get()
-                eval_obj = obj.evaluated_get(depsgraph)
-                bbox = [
-                    eval_obj.matrix_world @ Vector(corner)
-                    for corner in eval_obj.bound_box
-                ]
-                min_z = min(v.z for v in bbox)
-                obj.location.z -= min_z + 0.001
+        return DwellObj(obj, self)
 
-            if snap_line and wall_edge_index is not None:
-                wall = self.get_wall(wall_edge_index)
-                self.snap_line_to_wall(obj, wall, snap_rotate, wall_offset)
+    def build(self, filepath):
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        bpy.ops.wm.save_as_mainfile(filepath=filepath, check_existing=False)
+        print(f"Scene saved as {filepath}")
 
-    def snap_line_to_wall(self, obj, wall, snap_rotate, wall_offset):
-        # Update scene and get evaluated object
-        bpy.context.view_layer.update()
 
-        # Rotate the object against the wall based on oriented bounding box
-        obj.rotation_mode = "XYZ"
-        bbox = self.bounding_box_obb(obj)
-        obj_unit_vector = (bbox[snap_rotate[0]] - bbox[snap_rotate[1]]).normalized()
-        angle = math.atan2(
-            obj_unit_vector.cross(wall.normal).z, obj_unit_vector.dot(wall.normal)
-        )
-        obj.rotation_euler = (0, 0, angle)
+class DwellObj:
+    def __init__(self, obj, room):
+        self.obj = obj
+        self.room = room
 
-        # Set initial position
-        obj.location.x = wall.mid_x + wall.unit_x * wall_offset
-        obj.location.y = wall.mid_y + wall.unit_y * wall_offset
-        bbox = self.bounding_box_obb(obj)
-        offset = (bbox[snap_rotate[0]] - bbox[snap_rotate[1]]).length / 2
-
-        # Move back of object against wall
-        obj.location.x += wall.normal.x * offset
-        obj.location.y += wall.normal.y * offset
-
-        # Offset against wall thickness
-        obj.location.x += wall.normal.x * (self.thickness / 2)
-        obj.location.y += wall.normal.y * (self.thickness / 2)
-
-    def debug_cube(self, vector):
-        bpy.ops.mesh.primitive_cube_add(size=0.1, location=vector)
+    def floor(self):
+        bbox = self.bounding_box_obb(self.obj)
+        min_z = min(v.z for v in bbox)
+        self.obj.location.z -= min_z + 0.001
+        return self
 
     def bounding_box_aabb(self, obj):
         depsgraph = bpy.context.evaluated_depsgraph_get()
@@ -265,8 +231,79 @@ class Dwell:
             obb.append(Vector((corner.x, corner.y, max_z)))
         return obb
 
-    def build(self, filepath):
-        if os.path.exists(filepath):
-            os.remove(filepath)
-        bpy.ops.wm.save_as_mainfile(filepath=filepath, check_existing=False)
-        print(f"Scene saved as {filepath}")
+    def debug_cube(self, vector):
+        bpy.ops.mesh.primitive_cube_add(size=0.1, location=vector)
+
+    def debug_line(self, start, end, color=(1, 0, 0, 1), arrow_size=0.08):
+        # Create a new 3D curve
+        curve_data = bpy.data.curves.new("DebugCurve", type="CURVE")
+        curve_data.dimensions = "3D"
+        spline = curve_data.splines.new(type="POLY")
+        spline.points.add(1)
+        spline.points[0].co = (start[0], start[1], start[2], 1)
+        spline.points[1].co = (end[0], end[1], end[2], 1)
+
+        # Set bevel depth to thicken the line
+        curve_data.bevel_depth = 0.01
+
+        # Create the curve object and link it to the scene
+        curve_obj = bpy.data.objects.new("DebugLine", curve_data)
+        bpy.context.collection.objects.link(curve_obj)
+
+        # Create a red material and assign it to the curve
+        mat = bpy.data.materials.new(name="DebugLineMat")
+        mat.diffuse_color = color  # RGBA tuple (red, green, blue, alpha)
+        curve_obj.data.materials.append(mat)
+
+        # Create an arrowhead as a cone at the end point
+        bpy.ops.mesh.primitive_cone_add(
+            vertices=16, radius1=arrow_size, depth=arrow_size * 2, location=end
+        )
+        arrow_obj = bpy.context.active_object
+        arrow_obj.name = "DebugArrow"
+        arrow_obj.data.materials.append(mat)
+
+        # Rotate the arrowhead so its +Z axis aligns with the vector from start to end
+        direction = (Vector(end) - Vector(start)).normalized()
+        arrow_obj.rotation_mode = "QUATERNION"
+        arrow_obj.rotation_quaternion = direction.to_track_quat("Z", "Y")
+
+    def debug_base_vectors(self):
+        bbox = self.bounding_box_obb(self.obj)
+        self.debug_line(bbox[0], bbox[2])
+        self.debug_line(bbox[2], bbox[4])
+        self.debug_line(bbox[4], bbox[6])
+        self.debug_line(bbox[6], bbox[0])
+        return self
+
+    def snap_line_to_wall(self, obj, wall, snap_rotate, wall_offset):
+        # Update scene and get evaluated object
+        bpy.context.view_layer.update()
+
+        # Rotate the object against the wall based on oriented bounding box
+        obj.rotation_mode = "XYZ"
+        bbox = self.bounding_box_obb(obj)
+        obj_unit_vector = (bbox[snap_rotate[0]] - bbox[snap_rotate[1]]).normalized()
+        angle = math.atan2(
+            obj_unit_vector.cross(wall.normal).z, obj_unit_vector.dot(wall.normal)
+        )
+        obj.rotation_euler = (0, 0, angle)
+
+        # Set initial position
+        obj.location.x = wall.mid_x + wall.unit_x * wall_offset
+        obj.location.y = wall.mid_y + wall.unit_y * wall_offset
+        bbox = self.bounding_box_obb(obj)
+        offset = (bbox[snap_rotate[0]] - bbox[snap_rotate[1]]).length / 2
+
+        # Move back of object against wall
+        obj.location.x += wall.normal.x * offset
+        obj.location.y += wall.normal.y * offset
+
+        # Offset against wall thickness
+        obj.location.x += wall.normal.x * (self.room.thickness / 2)
+        obj.location.y += wall.normal.y * (self.room.thickness / 2)
+
+    def snap_wall(self, wall_edge_index=0, snap_rotate=[0, 2], wall_offset=0):
+        wall = self.room.get_wall(wall_edge_index)
+        self.snap_line_to_wall(self.obj, wall, snap_rotate, wall_offset)
+        return self
