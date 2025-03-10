@@ -7,28 +7,29 @@ from dwell import Dwell
 
 design = Dwell()
 
-design.create_floor([(0, 0), (13, 0), (10, 6), (6, 6), (6, 10), (0, 12)])
-design.create_walls(3, 0.2)
-design.add_window(edge_index=4, window_width=2, window_height=1.5, sill=1, offset=0)
-design.add_window(edge_index=0, window_width=2, window_height=1.5, sill=1, offset=0)
-design.add_window(edge_index=0, window_width=2, window_height=1.5, sill=1, offset=3)
-design.add_opening(edge_index=1, opening_width=2, opening_height=2, sill=0, offset=1)
+design.create_floor([(0, 0), (4, 0), (4, 2.8), (0, 2.8)])
+design.create_walls(1.5, 0.01)
+design.add_opening(
+    edge_index=3, opening_width=1.5, opening_height=1, sill=0.2, offset=0.08
+)
+design.add_opening(
+    edge_index=2, opening_width=0.7, opening_height=1.2, sill=0, offset=-1.3
+)
 
 design.add_glb_model(
     filepath="./brimnes.glb",
-    scale=(3, 3, 3),
-).floor().snap_wall(wall_edge_index=0)
+    scale=(2, 2, 2),
+).floor().snap_wall(wall_edge_index=0, wall_offset=-0.4)
 
 design.add_glb_model(
-    filepath="./kmart_blake1.glb",
-    scale=(0.5, 0.5, 0.5),
-).floor().snap_wall(wall_edge_index=4)
+    filepath="./bedside_office.glb",
+    scale=(0.75, 0.75, 0.75),
+).floor().snap_wall(wall_edge_index=0, wall_offset=1.7, snap_face=1)
 
 design.add_glb_model(
-    filepath="./kmart_isla2.glb",
-    scale=(1.1, 1.1, 1.1),
-).floor().snap_wall(
-    wall_edge_index=0, snap_face=3, wall_offset=-2, dist_to_wall=-0.01
-).debug_base_vectors()
+    filepath="./bedside_light_round.glb",
+    location=(0, 0, 0.75 + 0.1),
+    scale=(0.25, 0.25, 0.25),
+).snap_wall(wall_edge_index=0, wall_offset=1.7, dist_to_wall=0.1)
 
 design.build("output.blend")
