@@ -25,11 +25,31 @@ class Dwell:
         self.vertices = vertices
         mesh = bpy.data.meshes.new("Floor")
         floor = bpy.data.objects.new("Floor", mesh)
+
+        # Material
+        mat = bpy.data.materials.new(name="WoodFloor")
+        mat.use_nodes = True
+        bsdf = mat.node_tree.nodes["Principled BSDF"]
+        bsdf.inputs["Roughness"].default_value = 1
+        texImage = mat.node_tree.nodes.new("ShaderNodeTexImage")
+        texImage.image = bpy.data.images.load(
+            "/Users/yuegui/Documents/interior/floor.jpeg"
+        )
+        mat.node_tree.links.new(bsdf.inputs["Base Color"], texImage.outputs["Color"])
+        floor.data.materials.append(mat)
+
         bpy.context.collection.objects.link(floor)
         verts = [(x, y, 0) for (x, y) in vertices]
         face = list(range(len(verts)))
         mesh.from_pydata(verts, [], [face])
         mesh.update()
+
+        # Material
+        bpy.context.view_layer.objects.active = floor
+        bpy.ops.object.mode_set(mode="EDIT")
+        bpy.ops.uv.smart_project()
+        bpy.ops.object.mode_set(mode="OBJECT")
+
         xs = [v[0] for v in verts]
         ys = [v[1] for v in verts]
         self.width = max(xs) - min(xs)
