@@ -24,18 +24,18 @@ design.add_glb_model(
 design.add_glb_model(
     filepath="./bedside_office.glb",
     scale=(0.75, 0.75, 0.75),
-).floor().snap_wall(wall_edge_index=1, wall_offset=-1.1, snap_face=1)
+).floor().snap_wall(wall_edge_index=0, wall_offset=0.8, snap_face=1)
 
 design.add_glb_model(
     filepath="./bedside_light_round.glb",
     location=(0, 0, 0.75 + 0.1),
     scale=(0.25, 0.25, 0.25),
-).snap_wall(wall_edge_index=0, wall_offset=1.7, dist_to_wall=0.15)
+).snap_wall(wall_edge_index=0, wall_offset=0.8, dist_to_wall=0.15)
 
-design.add_glb_model(
-    filepath="./kmart_ladder.glb",
-    location=(0, 0, 0.75 + 0.1),
-).snap_wall(wall_edge_index=0, wall_offset=1.7, dist_to_wall=0.15)
+# design.add_glb_model(
+#     filepath="./kmart_ladder.glb",
+#     location=(0, 0, 0.75 + 0.1),
+# ).snap_wall(wall_edge_index=0, wall_offset=1.7, dist_to_wall=0.15)
 
 
 design.build("output.blend")
